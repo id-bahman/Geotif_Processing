@@ -1,3 +1,4 @@
+import numpy as np
 import rasterio
 import matplotlib.pyplot as plt
 from tkinter import Tk, Button, Label, Entry, filedialog
@@ -17,7 +18,7 @@ class GeoTIFFProcessor:
         self.open_button.pack(pady=5)
 
         # Label for the formula input
-        self.formula_label = Label(root, text="Enter formula (e.g., B1 > 100):")
+        self.formula_label = Label(root, text="Enter formula (e.g., np.sqrt(B1)):")
         self.formula_label.pack(pady=10)
 
         # Entry widget for formula input
@@ -53,11 +54,14 @@ class GeoTIFFProcessor:
                     # Get formula from the entry widget
                     user_formula = self.formula_entry.get()
                     if user_formula:
-                        # Apply the formula using eval
-                        self.processed_image = eval(user_formula)
+                        # Use eval with globals to allow numpy functions
+                        with np.errstate(divide='ignore', invalid='ignore'):
+                            self.processed_image = eval(user_formula, {"np": np, "B1": B1})
+                            self.processed_image = np.where(np.isinf(self.processed_image), np.nan, self.processed_image)
 
-                        # Convert boolean to integer or float (True -> 1, False -> 0)
-                        self.processed_image = self.processed_image.astype('float32')
+                        # Convert boolean to integer or float (if necessary)
+                        if self.processed_image.dtype == 'bool':
+                            self.processed_image = self.processed_image.astype('float32')
 
                         # Plot the processed image using matplotlib
                         plt.imshow(self.processed_image, cmap='gray')
